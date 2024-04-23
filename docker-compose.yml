@@ -4,20 +4,27 @@ services:
     image: redis
     ports:
       - 6379:6379
+    command: redis-server --save 60 1 --loglevel warning
     networks:
       - vlr_network
+    volumes:
+      - redis_data:/data
 
-  fvlr_api:
-    image: fvlr_api:latest
-    ports:
-      - 9091:9091
-    networks:
-      - vlr_network
-    links:
-      - redis
-    environment:
-      - DB_URI=redis://redis:6379
-      - PORT=9091
+#  fvlr_api:
+#    image: fvlr_api:latest
+#    ports:
+#      - 9091:9091
+#    networks:
+#      - vlr_network
+#    links:
+#      - redis
+#    environment:
+#      - DB_URI=redis://redis:6379
+#      - PORT=9091
 
 networks:
   vlr_network:
+
+volumes:
+  redis_data:
+    external: false

@@ -5,6 +5,8 @@ import { cors } from 'hono/cors'
 import addRoutes from './routes/router'
 import { createClient } from 'redis'
 import 'dotenv/config'
+import { Match } from './scrapers/matches/one'
+import { statusEnum, typeEnum } from './schemas/schemas'
 const DB_URI = process.env.DB_URI || 'redis://redis:6379'
 export const PORT = process.env.PORT || 9091
 // Initial Setup
@@ -48,10 +50,11 @@ app.use('*', async (c, next) => {
   }
   console.log(c.req.path)
 
+  const cachedPath = c.req.path.replaceAll(/\/0+/gm, '/') // Remove any trailing zeros from the path
   // Cached Response
   if (await client.exists(c.req.path)) {
     console.log('Cached Response')
-    const cachedData = await client.get(c.req.path) // .001ms
+    const cachedData = await client.get(cachedPath) // .001ms
     if (cachedData === null) return // Should never happen
     let cachedResponse
     // Clear the Cache if the data is not valid JSON
@@ -59,7 +62,7 @@ app.use('*', async (c, next) => {
       cachedResponse = JSON.parse(cachedData)
     } catch {
       // Clear Cache and close the request
-      client.del(c.req.path)
+      client.del(cachedPath)
       await next()
       return
     }
@@ -102,17 +105,26 @@ app.use('*', async (c, next) => {
       return
     }
     // Intercept the JSON
-    const data = await c.res.json()
+    let data = await c.res.json()
     // Cache the response
-    const cacheLifespan = () => {
-      switch (c.req.path.split('/')[1]) {
-        case 'match':
-          return 60 * 60 * 2 // 2 Hours
-        default:
-          return 60
-      }
+    let cacheLifespan = 60 * 60 * 1 // 1 Hour
+    switch (c.req.path.split('/')[1]) {
+      case 'match':
+        data = data as Match
+        // Check if the match is completed
+        if (data.status === statusEnum.Enum.Completed)
+          cacheLifespan = 60 * 60 * 24 * 365 // 1 Year
+        else
+          cacheLifespan = 60 // For live stats
+        break
+      case 'event':
+        if (data.status) {
+          if (data.status === statusEnum.Enum.Completed)
+            cacheLifespan = 60 * 60 * 24 * 365 // 1 Year
+        }
+        break
     }
-    client.setEx(c.req.path, cacheLifespan(), JSON.stringify(data))
+    client.setEx(cachedPath, cacheLifespan, JSON.stringify(data))
     // Check if it was an Error
     if (data.status === 'error') {
       c.res = c.json(
@@ -186,9 +198,9 @@ const RedisConnect = async () => {
     .connect()
     .then(() => {
       console.log('Redis connected!')
-      client.flushAll().then(() => {
-        console.log('Cleared Cache')
-      })
+      // client.flushAll().then(() => {
+      //   console.log('Cleared Cache')
+      // })
       CacheEnabled = true
     })
     .catch((err) => {
