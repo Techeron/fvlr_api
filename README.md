@@ -11,5 +11,12 @@ docker compose up -d
 bun i
 bun dev
 ```
-api is running on port 9091. 
-api docs can be found on the [base route](http://localhost:9091)
+The API is running on port 9091.
+
+The API docs can be found on the [base route](http://localhost:9091)
+
+## Contributing
+Feel free to submit a [pull request](https://github.com/Techeron/fvlr_api/pull/new/master) or an [issue](https://github.com/Techeron/fvlr_api/issues/new)!
+
+## License
+The MIT License (MIT)
