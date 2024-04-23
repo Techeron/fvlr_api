@@ -25,6 +25,7 @@ const fetchOnePlayer = async (id: string) => {
 }
 
 export const fetchPlayer = async (id: string): Promise<Player> => {
+  const agentArray = await getAgentArray()
   // check if id is intern
   if (id[0] === '0') {
     id = id.replace(/^[0]+/gm, '')
@@ -102,8 +103,8 @@ export const fetchPlayer = async (id: string): Promise<Player> => {
         })
         // Add the agent array for stats
         Player.agentStats = new Object() as Player['agentStats']
-        for (let i = 0; i < AgentArray.length; i++) {
-          const agentName = AgentArray[i] as keyof Player['agentStats']
+        for (let i = 0; i < agentArray.length; i++) {
+          const agentName = agentArray[i] as keyof Player['agentStats']
 
           Player.agentStats[agentName] = new Object() as AgentStats
           // Add the agent stats with no data

@@ -1,3 +1,5 @@
+import { client } from '..'
+
 const idGenerator = function (id: string) {
   // Takes an id and returns a 16 character string of 0x000... + id
   try {
@@ -8,39 +10,22 @@ const idGenerator = function (id: string) {
     return 'n/a'
   }
 }
-let AgentArray = [
-  'astra',
-  'breach',
-  'brimstone',
-  'chamber',
-  'cypher',
-  'deadlock',
-  'fade',
-  'gekko',
-  'harbor',
-  'iso',
-  'jett',
-  'kayo',
-  'killjoy',
-  'neon',
-  'omen',
-  'phoenix',
-  'raze',
-  'reyna',
-  'sage',
-  'skye',
-  'sova',
-  'viper',
-  'yoru',
-]
-
-fetch('https://valorant-api.com/v1/agents')
-  .then((res) => res.json())
-  .then((data) => {
-    AgentArray = data.data
+// requests the api for the agents and returns an array of agent names
+export async function getAgentArray(): Promise<string[]> {
+  if (await client.exists('agents')) {
+    console.info('Return Cached Agents')
+    const agents = (await client.get('agents')) as string
+    return JSON.parse(agents)
+  } else {
+    console.info('Cacheing Agents')
+    const response = await fetch('https://valorant-api.com/v1/agents')
+    const data = await response.json()
+    const agents = data.data
       .map((agent: any) => agent.displayName.toLowerCase().replace('/', ''))
       .sort()
-    console.log('Agents Updated')
-  })
+    await client.set('agents', JSON.stringify(agents), { EX: 60 * 60 * 24 * 7 })
+    return agents
+  }
+}
 
-export { idGenerator, AgentArray }
+export { idGenerator }
