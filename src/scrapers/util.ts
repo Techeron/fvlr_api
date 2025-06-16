@@ -50,21 +50,20 @@ const timeToUTC = function (date: string, time: string): string | null {
   return dateObj?.toISOString() || null
 }
 // requests the api for the agents and returns an array of agent names
-export async function getAgentArray(): Promise<string[]> {
-  if (await client.exists('agents')) {
-    console.info('Return Cached Agents')
-    const agents = (await client.get('agents')) as string
-    return JSON.parse(agents)
-  } else {
-    console.info('Cacheing Agents')
-    const response = await fetch('https://valorant-api.com/v1/agents')
-    const data = await response.json()
-    const agents = data.data
-      .map((agent: any) => agent.displayName.toLowerCase().replace('/', ''))
-      .sort()
-    await client.set('agents', JSON.stringify(agents), { EX: 60 * 60 * 24 * 7 })
-    return agents
-  }
+export function getAgentArray(): Promise<string[]> {
+  return new Promise((res, rej)=>{
+    fetch('https://valorant-api.com/v1/agents')
+    .then(data => data.json())
+    .then(data => {
+      const agents = data.data
+        .map((agent: any) => agent.displayName.toLowerCase().replace('/', ''))
+        .sort()
+      res(agents)
+    }).catch(err => {
+      console.error('Error fetching agents:', err)
+      rej(err)
+    });
+  })
 }
 
 export { idGenerator, timeToUTC }

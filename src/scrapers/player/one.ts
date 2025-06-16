@@ -2,7 +2,7 @@
 
 // External Libs
 import { load } from 'cheerio'
-import { idGenerator, AgentArray } from '../util'
+import { idGenerator, getAgentArray } from '../util'
 import {
   AgentStats,
   PlayerAgentStats,
@@ -11,6 +11,7 @@ import {
 } from '../../schemas/schemas'
 
 const fetchOnePlayer = async (id: string) => {
+  console.log(`Fetching players ${id}`)
   // Validate input
   // make sure id is a string of numbers
   id = id.replace(/\s/g, '')
@@ -26,6 +27,7 @@ const fetchOnePlayer = async (id: string) => {
 
 export const fetchPlayer = async (id: string): Promise<Player> => {
   const agentArray = await getAgentArray()
+  console.log(`Fetched ${agentArray.length} agents`)
   // check if id is intern
   if (id[0] === '0') {
     id = id.replace(/^[0]+/gm, '')
@@ -127,7 +129,7 @@ export const fetchPlayer = async (id: string): Promise<Player> => {
               Player.stats.data[i][statLabel]
           }
         })
-
+        console.log(`Fetched player ${Player.ign} (${Player.id})`)
         resolve(Player)
       })
       .catch((err) => {

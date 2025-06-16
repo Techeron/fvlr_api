@@ -266,8 +266,14 @@ function addPlayerRoutes(app: OpenAPIHono<Env, {}, '/'>) {
       },
     }),
     async (c: Context) => {
-      const Player = await fetchPlayer(c.req.param('id'))
-      return c.json<Player>(Player)
+      const Player = fetchPlayer(c.req.param('id'))
+        .then((Player) => {
+          return c.json<Player>(Player)
+        })
+        .catch((err) => {
+          console.error(err)
+        })
+      return Player
     }
   )
 }
