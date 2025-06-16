@@ -25,6 +25,21 @@ app.use(
 )
 // Caching
 app.use('*', async (c, next) => {
+  // if /doc, /favicon.ico, or /, skip caching
+  if (
+    c.req.path.includes('favicon.ico') ||
+    c.req.path === '' ||
+    c.req.path === '/' ||
+    c.req.path === '/doc'
+  ) {
+    await next()
+    return
+  }
+  // If the request is not a GET request, skip caching
+  if (c.req.method !== 'GET') {
+    await next()
+    return
+  }
   // Set a Default Return Value
   const DefaultResult = {
     cached: false,
