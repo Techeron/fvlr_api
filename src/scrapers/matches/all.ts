@@ -23,8 +23,8 @@ const fetchAllMatches = async (): Promise<AllMatches> => {
           '#wrapper > div.col-container > div:nth-child(1) > .wf-label.mod-large'
         )
         const MatchContainer = $(
-          '#wrapper > div.col-container > div:nth-child(1) > .wf-card[style="margin-bottom: 30px;"]'
-        )
+          '#wrapper > div.col-container > div:nth-child(1) > .wf-card'
+        ).filter((i, el) => $(el).find('a.match-item').length > 0)
         Labels.each((i, element) => {
           const today =
             $(element).text().trim().split('\n').length > 1 ? true : false
