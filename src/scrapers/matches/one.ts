@@ -2,7 +2,7 @@
 
 // External Libs
 import { load } from 'cheerio'
-import { idGenerator } from '../util'
+import { idGenerator, timeToUTC } from '../util'
 // Schema
 import { z } from '@hono/zod-openapi'
 import {
@@ -240,6 +240,7 @@ const fetchOneMatch = async (id: string): Promise<Match> => {
           }
         })
 
+        Match.datetimeiso = timeToUTC(Match.date, Match.time)
         console.log('Match Pulled: ' + Match.id)
         resolve(Match)
       })

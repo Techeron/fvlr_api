@@ -297,6 +297,9 @@ export const MatchSchema = z.object({
   time: z.string().openapi({
     example: '1:25 AM CEST',
   }),
+  datetimeiso: z.string().openapi({
+    example: '2023-12-22T01:25:00Z',
+  }),
   eventId: IDType, // ID or 0
   eventName: z.string(),
   logo: z.string().openapi({
