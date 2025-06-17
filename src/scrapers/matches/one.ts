@@ -19,7 +19,7 @@ import {
 export type Match = z.infer<typeof MatchSchema>
 
 const fetchOneMatch = async (id: string): Promise<Match> => {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     // fetch the page
     fetch(`https://www.vlr.gg/${id}`)
       .then((response) => response.text())
@@ -97,6 +97,7 @@ const fetchOneMatch = async (id: string): Promise<Match> => {
               $(element).parent().parent().attr('href')?.split('/')[2] || ''
             ),
             score: MapScore[i],
+            players: new Array()
           })
         })
 
@@ -145,98 +146,114 @@ const fetchOneMatch = async (id: string): Promise<Match> => {
           // Just add players to the Match Players array
           if (i == 0) {
             const PlayerContainers = $(element).find(
-              '.wf-table-inset.mod-overview tr'
+              '.wf-table-inset.mod-overview'
             )
+            var teamId = '0'
             PlayerContainers.each((index, element) => {
-              if (
-                $(element)
+              if (index == 0) {
+                teamId = Match.teams[0].id
+              } else {
+                teamId = Match.teams[1].id
+              }
+              var players = $(element).find('tr')
+              players.each((idx, element) => {
+                if (
+                  $(element)
+                    .find('.mod-player a div:nth-child(1)')
+                    .text()
+                    .trim() == ''
+                )
+                  return
+                const player = new Object() as PlayerMatchStatsElement
+                player.teamId = teamId // Use the outer loop's teamId for correct team association
+                player.name = $(element)
                   .find('.mod-player a div:nth-child(1)')
                   .text()
-                  .trim() == ''
-              )
-                return
-              const player = new Object() as PlayerMatchStatsElement
-              player.name = $(element)
-                .find('.mod-player a div:nth-child(1)')
-                .text()
-                .trim()
-              player.team = $(element)
-                .find('.mod-player a div:nth-child(2)')
-                .text()
-                .trim()
-              player.link = `https://www.vlr.gg${$(element)
-                .find('.mod-player a')
-                .attr('href')}`
-              const playerStats = $(element).find('.mod-stat')
-              player.statsAdvanced = new Object() as ExtStats
-              player.stats = new Object() as PlayerStats
-              playerStats.each((i, element) => {
-                const ct = $(element).find('.mod-ct').text().trim()
-                const t = $(element).find('.mod-t').text().trim()
-                const ot = $(element).find('.mod-ot').text().trim()
-                const both = $(element).find('.mod-both').text().trim()
-                const data = {
-                  ct: ct,
-                  t: t,
-                  ot: ot,
-                }
-                switch (i) {
-                  case 0:
-                    player.statsAdvanced.kdr = data
-                    player.stats.kdr = both
-                    break
-                  case 1:
-                    player.statsAdvanced.acs = data
-                    player.stats.acs = both
-                    break
-                  case 2:
-                    player.statsAdvanced.k = data
-                    player.stats.k = both
-                    break
-                  case 3:
-                    player.statsAdvanced.d = data
-                    player.stats.d = both
-                    break
-                  case 4:
-                    player.statsAdvanced.a = data
-                    player.stats.a = both
-                    break
-                  case 5:
-                    player.statsAdvanced.kdb = data
-                    player.stats.kdb = both
-                    break
-                  case 6:
-                    player.statsAdvanced.kast = data
-                    player.stats.kast = both
-                    break
-                  case 7:
-                    player.statsAdvanced.adr = data
-                    player.stats.adr = both
-                    break
-                  case 8:
-                    player.statsAdvanced.hs = data
-                    player.stats.hs = both
-                    break
-                  case 9:
-                    player.statsAdvanced.fk = data
-                    player.stats.fk = both
-                    break
-                  case 10:
-                    player.statsAdvanced.fd = data
-                    player.stats.fd = both
-                    break
-                  case 11:
-                    player.statsAdvanced.fkdb = data
-                    player.stats.fkdb = both
-                    break
-                  default:
-                    break
-                }
+                  .trim()
+                player.team = $(element)
+                  .find('.mod-player a div:nth-child(2)')
+                  .text()
+                  .trim()
+                // player.teamIdFromLink = idGenerator(
+                //   $(element)
+                //     .find('.mod-player a div:nth-child(2)')
+                //     .attr('href')
+                //     ?.split('/')[2] || ''
+                // )
+                player.link = `https://www.vlr.gg${$(element)
+                  .find('.mod-player a')
+                  .attr('href')}`
+                const playerStats = $(element).find('.mod-stat')
+                player.statsAdvanced = new Object() as ExtStats
+                player.stats = new Object() as PlayerStats
+                playerStats.each((i, element) => {
+                  const ct = $(element).find('.mod-ct').text().trim()
+                  const t = $(element).find('.mod-t').text().trim()
+                  const ot = $(element).find('.mod-ot').text().trim()
+                  const both = $(element).find('.mod-both').text().trim()
+                  const data = {
+                    ct: ct,
+                    t: t,
+                    ot: ot,
+                  }
+                  switch (i) {
+                    case 0:
+                      player.statsAdvanced.kdr = data
+                      player.stats.kdr = both
+                      break
+                    case 1:
+                      player.statsAdvanced.acs = data
+                      player.stats.acs = both
+                      break
+                    case 2:
+                      player.statsAdvanced.k = data
+                      player.stats.k = both
+                      break
+                    case 3:
+                      player.statsAdvanced.d = data
+                      player.stats.d = both
+                      break
+                    case 4:
+                      player.statsAdvanced.a = data
+                      player.stats.a = both
+                      break
+                    case 5:
+                      player.statsAdvanced.kdb = data
+                      player.stats.kdb = both
+                      break
+                    case 6:
+                      player.statsAdvanced.kast = data
+                      player.stats.kast = both
+                      break
+                    case 7:
+                      player.statsAdvanced.adr = data
+                      player.stats.adr = both
+                      break
+                    case 8:
+                      player.statsAdvanced.hs = data
+                      player.stats.hs = both
+                      break
+                    case 9:
+                      player.statsAdvanced.fk = data
+                      player.stats.fk = both
+                      break
+                    case 10:
+                      player.statsAdvanced.fd = data
+                      player.stats.fd = both
+                      break
+                    case 11:
+                      player.statsAdvanced.fkdb = data
+                      player.stats.fkdb = both
+                      break
+                    default:
+                      break
+                  }
+                })
+                console.log(Match.teams)
+                Match.teams[index].players.push(player)
+                Match.players.push(player)
               })
-              Match.players.push(player)
             })
-          } else {
-            // Add Logic for 2nd event to merge into first one
           }
         })
 

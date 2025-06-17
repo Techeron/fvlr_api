@@ -23,140 +23,76 @@ app.use(
     origin: '*',
   })
 )
-// Caching
+/* --- Caching Middleware --- */
 app.use('*', async (c, next) => {
-  // if /doc, /favicon.ico, or /, skip caching
+  // Skip caching for docs, favicon, or root
+  const skipCache = [
+    '', '/',
+    '/doc',
+  ]
   if (
     c.req.path.includes('favicon.ico') ||
-    c.req.path === '' ||
-    c.req.path === '/' ||
-    c.req.path === '/doc'
+    skipCache.includes(c.req.path)
   ) {
     await next()
     return
   }
-  // If the request is not a GET request, skip caching
+  // Only cache GET requests
   if (c.req.method !== 'GET') {
     await next()
     return
   }
-  // Set a Default Return Value
-  const DefaultResult = {
-    cached: false,
-    status: 'success',
-    data: {},
-  }
-
+  const DefaultResult = { cached: false, status: 'success', data: {} }
   if (!CacheEnabled) {
     await next()
     const data = await c.res.json()
-    c.res = c.json(Object.assign(DefaultResult, { cached: false, data }))
+    c.res = c.json({ ...DefaultResult, cached: false, data })
     return
   }
-  // Reject Blacklisted Routes
-  if (
-    c.req.path.includes('favicon.ico') ||
-    c.req.path === '' ||
-    c.req.path === '/' ||
-    c.req.path === '/doc'
-  ) {
-    await next()
-    return
-  }
-  console.log(c.req.path)
-
-  const cachedPath = c.req.path.replaceAll(/\/0+/gm, '/') // Remove any trailing zeros from the path
-  // Cached Response
-  if (await client.exists(c.req.path)) {
-    console.log('Cached Response')
-    const cachedData = await client.get(cachedPath) // .001ms
-    if (cachedData === null) return // Should never happen
-    let cachedResponse
-    // Clear the Cache if the data is not valid JSON
+  // Use normalized path for cache key
+  const cachedPath = c.req.path.replaceAll(/\/0+/gm, '/')
+  // Try to serve from cache
+  if (await client.exists(cachedPath)) {
     try {
-      cachedResponse = JSON.parse(cachedData)
+      const cachedData = await client.get(cachedPath)
+      if (!cachedData) return
+      const cachedResponse = JSON.parse(cachedData)
+      if (cachedResponse.status === 'error') {
+        c.res = c.json({ ...DefaultResult, cached: true, status: 'error', message: cachedResponse.message })
+      } else {
+        c.res = c.json({ ...DefaultResult, cached: true, data: cachedResponse })
+      }
+      return
     } catch {
-      // Clear Cache and close the request
-      client.del(cachedPath)
+      await client.del(cachedPath)
       await next()
       return
     }
-    // Return the Cached Response
-    // If the Cached Response was an error, we Overwrite the fields
-    if (cachedResponse.status === 'error') {
-      c.res = c.json(
-        Object.assign(DefaultResult, {
-          cached: true,
-          status: 'error',
-          message: cachedResponse.message,
-        })
-      )
-    }
-    // Otherwise we return the cached response normally
-    else {
-      c.res = c.json(
-        Object.assign(DefaultResult, {
-          cached: true,
-          data: cachedResponse,
-        })
-      )
-    }
+  }
+  // Not cached: generate response
+  await next()
+  if (c.res.status === 404) {
+    c.res = c.json({ status: 'error', message: 'Route not found' }, 404)
     return
   }
-  // Non-Cached Response
-  else {
-    console.log('Not Cached Response')
-    // Let the page generate as normal
-    await next()
-    // check if the route was not found
-    if (c.res.status === 404) {
-      c.res = c.json(
-        {
-          status: 'error',
-          message: 'Route not found',
-        },
-        404
-      )
-      return
-    }
-    // Intercept the JSON
-    let data = await c.res.json()
-    // Cache the response
-    let cacheLifespan = 60 * 60 * 1 // 1 Hour
-    switch (c.req.path.split('/')[1]) {
-      case 'match':
-        data = data as Match
-        // Check if the match is completed
-        if (data.status === statusEnum.Enum.Completed)
-          cacheLifespan = 60 * 60 * 24 * 365 // 1 Year
-        else
-          cacheLifespan = 60 // For live stats
-        break
-      case 'event':
-        if (data.status) {
-          if (data.status === statusEnum.Enum.Completed)
-            cacheLifespan = 60 * 60 * 24 * 365 // 1 Year
-        }
-        break
-    }
-    client.setEx(cachedPath, cacheLifespan, JSON.stringify(data))
-    // Check if it was an Error
-    if (data.status === 'error') {
-      c.res = c.json(
-        Object.assign(DefaultResult, {
-          cached: false,
-          status: data.status,
-          message: data.message,
-        })
-      )
-      return
-    }
-    // Otherwise return the data
-    else {
-      c.res = c.json(Object.assign(DefaultResult, { cached: false, data }))
-      return
-    }
+  let data = await c.res.json()
+  // Set cache lifespan
+  let cacheLifespan = 60 * 60 // 1 hour default
+  const mainRoute = c.req.path.split('/')[1]
+  if (mainRoute === 'match') {
+    data = data as Match
+    cacheLifespan = (data.status === statusEnum.Enum.Completed)
+      ? 60 * 60 * 24 * 365 // 1 year
+      : 60 * 5 // 5 minutes for live stats
+  } else if (mainRoute === 'event' && data.status === statusEnum.Enum.Completed) {
+    cacheLifespan = 60 * 60 * 24 * 365 // 1 year
   }
+  client.setEx(cachedPath, cacheLifespan, JSON.stringify(data))
+  if (data.status === 'error') {
+    c.res = c.json({ ...DefaultResult, cached: false, status: data.status, message: data.message })
+    return
+  }
+  c.res = c.json({ ...DefaultResult, cached: false, data })
 })
 
 app.use('/', async (c, next) => {
@@ -181,7 +117,7 @@ app.doc('/doc', {
   servers: [
     {
       description: 'Development',
-      url: 'http://localhost:3000',
+      url: 'http://localhost:9091',
     },
     {
       description: 'Production',
@@ -189,12 +125,12 @@ app.doc('/doc', {
     },
   ],
   info: {
-    title: 'Vlr API',
+    title: 'VLR API',
     contact: {
       name: 'Cody Krist',
       url: 'https://discord.gg/5drhYDQuQm',
     },
-    version: 'v0.1',
+    version: 'v1.0.0',
   },
 })
 

@@ -202,6 +202,16 @@ export const playerAgentStatsObject = z.object({
 })
 export type PlayerAgentStats = z.infer<typeof playerAgentStatsObject>
 
+export const playerMatchStatsObject = z.object({
+  name: z.string(),
+  team: z.string(),
+  teamId: z.string(),
+  link: z.string(),
+  stats: playerStatsObject,
+  statsAdvanced: extStatsObject,
+})
+export const playerMatchStatsArraySchema = playerMatchStatsObject.array()
+
 // Object for the team used in matches
 const gameTeamObject = z.object({
   name: z.string().openapi({
@@ -214,6 +224,9 @@ const gameTeamObject = z.object({
     .openapi({
       example: '000000000001927',
     }),
+  players: z.array(
+    playerMatchStatsObject
+  ),
   score: z.number().openapi({
     example: 13,
   }),
@@ -246,15 +259,6 @@ const streamObject = z.object({
   link: z.string(),
 })
 export type Stream = z.infer<typeof streamObject>
-
-export const playerMatchStatsObject = z.object({
-  name: z.string(),
-  team: z.string(),
-  link: z.string(),
-  stats: playerStatsObject,
-  statsAdvanced: extStatsObject,
-})
-export const playerMatchStatsArraySchema = playerMatchStatsObject.array()
 
 export type PlayerMatchStats = z.infer<typeof playerMatchStatsArraySchema>
 export type PlayerMatchStatsElement = z.infer<
